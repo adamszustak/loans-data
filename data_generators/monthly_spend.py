@@ -1,10 +1,21 @@
 import glob
 import random
-from dataclasses import asdict, dataclass
-from typing import Any, Iterator
+from dataclasses import (
+    asdict,
+    dataclass
+)
+from typing import (
+    Any,
+    Iterator
+)
 
-from utils import (CUSTOMERS_FILENAME, DATES_FILENAME, FOLDER_NAME_FOR_FILES,
-                   Reader, Writer)
+from utils import (
+    CUSTOMERS_FILENAME,
+    DATES_FILENAME,
+    FOLDER_NAME_FOR_FILES,
+    Reader,
+    Writer
+)
 
 HEADERS = [
     "customer_id",
@@ -26,6 +37,7 @@ CHANGE_SPEND_RATE_PROBABILITY = 0.3
 CHANGE_AVAILABLE_MONEY_RATE_PROBABILITY = 0.1
 
 OUTPUT_FILE_NAME = f"{FOLDER_NAME_FOR_FILES}/monthly_spend"
+PATH_TO_AVRO_SCHEMA = "avro/customer.avsc"
 
 
 @dataclass
@@ -98,13 +110,18 @@ def data_generator(
 
 
 if __name__ == "__main__":
+    output_extension = Writer.parse_arguments()
+
     reader = Reader()
     base_customers_info = reader.read_data_from_file(CUSTOMERS_FILENAME)
     dates = reader.read_data_from_file(DATES_FILENAME)
     customers_info = extend_base_customers_info(base_customers_info)
 
     writer = Writer(OUTPUT_FILE_NAME, data_generator, customers_info, dates)
-    writer.generate_data_as_temp_files()
-    filenames = glob.glob("*.out")
-    writer.merge_temp_files_as_csv(HEADERS, filenames)
-    writer.delete_temp_files(filenames)
+    if output_extension == "csv":
+        writer.generate_data_as_temp_files()
+        filenames = glob.glob("*.out")
+        writer.merge_temp_files_as_csv(HEADERS, filenames)
+        writer.delete_temp_files(filenames)
+    elif output_extension == "avro":
+        writer.generate_data_as_avro(PATH_TO_AVRO_SCHEMA)

@@ -1,11 +1,22 @@
 import glob
 import random
 import uuid
-from dataclasses import asdict, dataclass
-from typing import Any, Iterator
+from dataclasses import (
+    asdict,
+    dataclass
+)
+from typing import (
+    Any,
+    Iterator
+)
 
-from utils import (CUSTOMERS_FILENAME, DATES_FILENAME, FOLDER_NAME_FOR_FILES,
-                   Reader, Writer)
+from utils import (
+    CUSTOMERS_FILENAME,
+    DATES_FILENAME,
+    FOLDER_NAME_FOR_FILES,
+    Reader,
+    Writer
+)
 
 HEADERS = [
     "customer_id",
@@ -14,7 +25,7 @@ HEADERS = [
     "loan_id",
     "loan_category",
     "nr_of_months",
-    "due_amount",
+    "due_amount_in_usd",
     "due_date",
     "payment_date",
 ]
@@ -27,25 +38,27 @@ LOAN_MIN_COST_VALUE_IN_USD = 100
 LOAN_TYPES_WITH_MAX_COST_VALUE_IN_USD = {"Personal": 200, "Auto": 300, "Student": 400}
 
 OUTPUT_FILE_NAME = f"{FOLDER_NAME_FOR_FILES}/loans"
+PATH_TO_AVRO_SCHEMA = "avro/loan.avsc"
 
 
 @dataclass
 class Loan:
-    customer_id: int
+    customer_id: str
     first_name: str
     last_name: str
     loan_id: str
     loan_category: str
     start_dates_index: int
     nr_of_months: int
-    due_amount: int
+    due_amount_in_usd: int
     due_day: int
 
 
 def _generate_loan_dates_indexes(dates: list[tuple[Any, ...]]) -> tuple[int, int]:
     total_nr_of_months = len(dates)
     loan_length_in_months = random.randint(
-        LOAN_NR_OF_MONTHS_RANGE["min"], LOAN_NR_OF_MONTHS_RANGE["max"]
+        LOAN_NR_OF_MONTHS_RANGE["min"],
+        min(LOAN_NR_OF_MONTHS_RANGE["max"], total_nr_of_months),
     )
     last_accurate_month_nr = total_nr_of_months - loan_length_in_months
     start_month_index = random.randint(0, last_accurate_month_nr)
@@ -65,7 +78,9 @@ def extend_loans_info(
         )
         max_due_amount_value = LOAN_TYPES_WITH_MAX_COST_VALUE_IN_USD[loan_category]
         start_dates_index, loan_length_in_months = _generate_loan_dates_indexes(dates)
-        due_amount = random.randint(LOAN_MIN_COST_VALUE_IN_USD, max_due_amount_value)
+        due_amount_in_usd = random.randint(
+            LOAN_MIN_COST_VALUE_IN_USD, max_due_amount_value
+        )
         due_day = random.randint(
             LOAN_DUE_DAY_OF_MONTH_RANGE["min"], LOAN_DUE_DAY_OF_MONTH_RANGE["max"]
         )
@@ -77,7 +92,7 @@ def extend_loans_info(
             loan_category,
             start_dates_index,
             loan_length_in_months,
-            due_amount,
+            due_amount_in_usd,
             due_day,
         )
         base_infos.append(loan)
@@ -95,7 +110,7 @@ def data_generator(
     del record["due_day"]
 
     for raw_month in loan_months:
-        record_to_write = record
+        record_to_write = record.copy()
         date_without_day = raw_month[0][2:]
         full_due_date = f"{loan.due_day}{date_without_day}"
         record_to_write["due_date"] = full_due_date
@@ -109,13 +124,18 @@ def data_generator(
 
 
 if __name__ == "__main__":
+    output_extension = Writer.parse_arguments()
+
     reader = Reader()
     base_customers_info = reader.read_data_from_file(CUSTOMERS_FILENAME)
     dates = reader.read_data_from_file(DATES_FILENAME)
     loans = extend_loans_info(base_customers_info, dates)
 
     writer = Writer(OUTPUT_FILE_NAME, data_generator, loans, dates)
-    writer.generate_data_as_temp_files()
-    filenames = glob.glob("*.out")
-    writer.merge_temp_files_as_csv(HEADERS, filenames)
-    writer.delete_temp_files(filenames)
+    if output_extension == "csv":
+        writer.generate_data_as_temp_files()
+        filenames = glob.glob("*.out")
+        writer.merge_temp_files_as_csv(HEADERS, filenames)
+        writer.delete_temp_files(filenames)
+    elif output_extension == "avro":
+        writer.generate_data_as_avro(PATH_TO_AVRO_SCHEMA)

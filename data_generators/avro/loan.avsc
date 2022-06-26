@@ -1,0 +1,51 @@
+{
+    "name": "Loan",
+    "type": "record",
+    "docs": "Loan monthly spend",
+    "fields": [
+        {
+            "name": "customer_id",
+            "type": "string"
+        },
+        {
+            "name": "first_name",
+            "type": "string"
+        },
+        {
+            "name": "last_name",
+            "type": "string"
+        },
+        {
+            "name": "loan_id",
+            "type": "string"
+        },
+        {
+            "name": "loan_category",
+            "type": {
+                "type": "enum",
+                "name": "category",
+                "symbols": [
+                    "Personal",
+                    "Auto",
+                    "Student"
+                ]
+            }
+        },
+        {
+            "name": "nr_of_months",
+            "type": "int"
+        },
+        {
+            "name": "due_amount_in_usd",
+            "type": "int"
+        },
+        {
+            "name": "due_date",
+            "type": "string"
+        },
+        {
+            "name": "payment_date",
+            "type": "string"
+        }
+    ]
+}

@@ -1,6 +1,14 @@
+import argparse
+import copy
+import json
 import multiprocessing
 import os
-from typing import Any, Callable
+from typing import (
+    Any,
+    Callable
+)
+
+import fastavro
 
 BATCH_WRITE_SIZE = 5000
 
@@ -16,6 +24,14 @@ class Reader:
             for row in file:
                 elements.append(tuple(row.rstrip().split(",")))
         return elements
+
+    def read_data_from_avro(self, filename: str) -> list[dict[str, Any]]:
+        with open(filename, "rb") as f:
+            reader = fastavro.reader(f)
+            content = [el for el in reader]
+            metadata = copy.deepcopy(reader.metadata)
+            print(f"Schema for AVRO file:\n{json.loads(metadata['avro.schema'])}")
+        return content
 
 
 class Writer:
@@ -67,9 +83,38 @@ class Writer:
                     infile = readfile.read()
                     outfile.write(infile)
 
+    def generate_data_as_avro(
+        self,
+        path_to_schema: str,
+    ) -> None:
+        extension = "avro"
+        parsed_schema = fastavro.schema.load_schema(path_to_schema)
+        records_to_write = []
+
+        with open(f"{self.out_filename}.{extension}", "a+b") as outfile:
+            for element in self._elements_to_write:
+                for record_to_write in self._data_generator(element, self._dates):
+                    if len(records_to_write) % BATCH_WRITE_SIZE == 0:
+                        fastavro.writer(outfile, parsed_schema, records_to_write)
+                        records_to_write = []
+                    records_to_write.append(record_to_write)
+            fastavro.writer(outfile, parsed_schema, records_to_write)
+
     def delete_temp_files(self, temp_filenames: list[str]) -> None:
         for filePath in temp_filenames:
             try:
                 os.remove(filePath)
             except:
                 print("Error while deleting file : ", filePath)
+
+    @staticmethod
+    def parse_arguments() -> tuple[int, int]:
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "extension",
+            type=str,
+            help="Type of output file. Possible values: AVRO, CSV",
+            choices=("csv", "avro"),
+        )
+        args = parser.parse_args()
+        return args.extension

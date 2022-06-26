@@ -1,0 +1,55 @@
+{
+    "name": "Customer",
+    "type": "record",
+    "docs": "Customer monthly spend",
+    "fields": [
+        {
+            "name": "customer_id",
+            "type": "string"
+        },
+        {
+            "name": "first_name",
+            "type": "string"
+        },
+        {
+            "name": "last_name",
+            "type": "string"
+        },
+        {
+            "name": "spend_rate",
+            "type": {
+                "type": "enum",
+                "name": "rate1",
+                "symbols": [
+                    "Low",
+                    "Medium",
+                    "High"
+                ]
+            }
+        },
+        {
+            "name": "available_money_rate",
+            "type": {
+                "type": "enum",
+                "name": "rate2",
+                "symbols": [
+                    "Low",
+                    "Medium",
+                    "High"
+                ]
+            }
+        },
+        {
+            "name": "spend_money_in_usd",
+            "type": "int"
+        },
+        {
+            "name": "available_money_in_usd",
+            "type": "int"
+        },
+        {
+            "name": "month",
+            "type": "string"
+        }
+    ]
+}
