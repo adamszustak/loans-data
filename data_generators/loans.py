@@ -28,6 +28,7 @@ HEADERS = [
     "due_amount_in_usd",
     "due_date",
     "payment_date",
+    "payment_amount",
 ]
 
 LOAN_NR_OF_MONTHS_RANGE = {"min": 6, "max": 50}
@@ -36,6 +37,8 @@ LOAN_PAYMENT_DAY_OF_MONTH_RANGE = {"min": 1, "max": 28}
 
 LOAN_MIN_COST_VALUE_IN_USD = 100
 LOAN_TYPES_WITH_MAX_COST_VALUE_IN_USD = {"Personal": 200, "Auto": 300, "Student": 400}
+LACK_OF_PAYMENT_PROBABILITY = 0.01
+PAYMENT_DEVIATION_IN_PERCENTS = 0.1
 
 OUTPUT_FILE_NAME = f"{FOLDER_NAME_FOR_FILES}/loans"
 PATH_TO_AVRO_SCHEMA = "avro/loan.avsc"
@@ -52,6 +55,8 @@ class Loan:
     nr_of_months: int
     due_amount_in_usd: int
     due_day: int
+    min_payment_amount_in_usd: int
+    max_payment_amount_in_usd: int
 
 
 def _generate_loan_dates_indexes(dates: list[tuple[Any, ...]]) -> tuple[int, int]:
@@ -84,6 +89,8 @@ def extend_loans_info(
         due_day = random.randint(
             LOAN_DUE_DAY_OF_MONTH_RANGE["min"], LOAN_DUE_DAY_OF_MONTH_RANGE["max"]
         )
+        min_payment_amount_in_usd = int(due_amount_in_usd - due_amount_in_usd * PAYMENT_DEVIATION_IN_PERCENTS)
+        max_payment_amount_in_usd = int(due_amount_in_usd + due_amount_in_usd * PAYMENT_DEVIATION_IN_PERCENTS)
         loan = Loan(
             customer_id,
             first_name,
@@ -94,6 +101,8 @@ def extend_loans_info(
             loan_length_in_months,
             due_amount_in_usd,
             due_day,
+            min_payment_amount_in_usd,
+            max_payment_amount_in_usd
         )
         base_infos.append(loan)
     return base_infos
@@ -108,6 +117,8 @@ def data_generator(
     record = asdict(loan)
     del record["start_dates_index"]
     del record["due_day"]
+    del record["min_payment_amount_in_usd"]
+    del record["max_payment_amount_in_usd"]
 
     for raw_month in loan_months:
         record_to_write = record.copy()
@@ -120,6 +131,10 @@ def data_generator(
         )
         full_payment_date = f"{payment_day}{date_without_day}"
         record_to_write["payment_date"] = full_payment_date
+
+        record_to_write["payment_amount"] = 0
+        if random.random() > LACK_OF_PAYMENT_PROBABILITY:
+            record_to_write["payment_amount"] = random.randint(loan.min_payment_amount_in_usd, loan.max_payment_amount_in_usd)
         yield record_to_write
 
 
