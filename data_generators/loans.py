@@ -28,7 +28,7 @@ HEADERS = [
     "due_amount_in_usd",
     "due_date",
     "payment_date",
-    "payment_amount",
+    "payment_amount_in_usd",
 ]
 
 LOAN_NR_OF_MONTHS_RANGE = {"min": 6, "max": 50}
