@@ -1,5 +1,10 @@
 from datetime import datetime
-from typing import Dict, Iterable, Tuple, Union
+from typing import (
+    Dict,
+    Iterable,
+    Tuple,
+    Union
+)
 
 import apache_beam as beam
 
@@ -52,7 +57,9 @@ def count_points_for_late_payment(
 def filter_where_available_money_is_higher_than_due_amount(
     row: Tuple[str, Dict[str, Iterable[str]]]
 ) -> Tuple[str, Dict[str, Iterable[str]]]:
-    if row[1]["loans"] and row[1]["loans"] < row[1]["available money"]:
+    loan_amount = row[1]["loans"]
+    available_amount = row[1]["available money"][0]
+    if loan_amount and (int(loan_amount[0]) < int(available_amount)):
         return row
 
 
@@ -178,7 +185,8 @@ def run_pipeline():
             >> beam.CoGroupByKey()
             | "Filter entries where available money is higher than due amount"
             >> beam.Filter(filter_where_available_money_is_higher_than_due_amount)
-            | "Remove month from key; id1: 1" >> beam.Map(lambda row: (row[0].split("/")[0], 1))
+            | "Remove month from key; id1: 1"
+            >> beam.Map(lambda row: (row[0].split("/")[0], 1))
             | "Sum not full paid loans" >> beam.CombinePerKey(sum)
             | "Count points for lack of full payment where has enough money"
             >> beam.Map(
